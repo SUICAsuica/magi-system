@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAGI SYSTEM - HARDCORE</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@900&family=Antonio:wght@700&display=swap');
+
+        :root {
+            /* --- エヴァカラー定義 (高彩度・ハイコントラスト) --- */
+            --c-orange: #ff6600;   /* 基本のオレンジ */
+            --c-blue: #00ccff;     /* 承認の水色（シアン寄り） */
+            --c-red: #ee0000;      /* 否定の赤 */
+            --c-black: #000000;    /* 背景 */
+            --c-grid: #003311;     /* 暗い緑 */
+            
+            /* 枠線の太さ */
+            --border-width: 6px;
+        }
+
+        body {
+            background-color: var(--c-black);
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            font-family: 'Shippori Mincho', serif;
+            user-select: none;
+        }
+
+        /* 画面全体のスケーリングコンテナ */
+        #stage {
+            position: relative;
+            width: 1024px;
+            height: 768px;
+            background: var(--c-black);
+            transform-origin: center center;
+        }
+
+        /* --- 背景: グリッド演出 --- */
+        .grid-bg {
+            position: absolute;
+            top: 60px;
+            width: 100%;
+            height: 120px;
+            background: repeating-linear-gradient(
+                0deg, transparent, transparent 4px, var(--c-grid) 4px, var(--c-grid) 6px
+            );
+            z-index: 0;
+        }
+
+        /* --- ヘッダー: 提訴 / 決議 --- */
+        .header-txt {
+            position: absolute;
+            top: 50px;
+            font-size: 100px;
+            font-weight: 900;
+            color: var(--c-orange);
+            line-height: 1;
+            z-index: 10;
+            transform: scale(1, 1.4); /* 縦に潰す変形 */
+            letter-spacing: -5px;
+            filter: drop-shadow(4px 4px 0px #000);
+        }
+        .h-left { left: 60px; }
+        .h-right { right: 60px; opacity: 0.2; }
+
+        /* --- 左上のコード情報 --- */
+        .info-box {
+            position: absolute;
+            top: 180px; left: 50px;
+            font-family: 'Antonio', sans-serif;
+            color: var(--c-orange);
+            line-height: 1.2;
+        }
+        .ib-title { font-size: 50px; letter-spacing: 3px; margin-bottom: 10px; }
+        .ib-sub { font-size: 20px; letter-spacing: 1px; opacity: 0.8; }
+
+        /* --- MAGI レイアウトコンテナ --- */
+        .magi-layout {
+            position: absolute;
+            top: 56%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 900px; height: 550px;
+        }
+
+        /* --- 各ユニット（共通） --- */
+        /* 外側の色（枠線になる部分） */
+        .unit-frame {
+            position: absolute;
+            background-color: var(--c-orange);
+            /* 点滅アニメーション用クラス */
+            transition: background-color 0.05s; 
+        }
+        /* 内側の黒（中抜き部分） */
+        .unit-core {
+            position: absolute;
+            background-color: var(--c-black);
+            /* 枠線の太さ分内側に配置 */
+            top: var(--border-width); 
+            left: var(--border-width); 
+            right: var(--border-width); 
+            bottom: var(--border-width);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- 形状定義 --- */
+        
+        /* 1. BALTHASAR (上) - 六角形 */
+        .shape-bal {
+            top: 0; left: 50%; transform: translateX(-50%);
+            width: 380px; height: 270px;
+            clip-path: polygon(0 0, 100% 0, 100% 72%, 82% 100%, 18% 100%, 0 72%);
+        }
+        .shape-bal .unit-core {
+            clip-path: polygon(0 0, 100% 0, 100% 72%, 82% 100%, 18% 100%, 0 72%);
+        }
+
+        /* 2. CASPER (左下) - 変形四角 */
+        .shape-cas {
+            bottom: 0; left: 0;
+            width: 400px; height: 250px;
+            clip-path: polygon(0 0, 72% 0, 100% 32%, 100% 100%, 0 100%);
+        }
+        .shape-cas .unit-core {
+            clip-path: polygon(0 0, 72% 0, 100% 32%, 100% 100%, 0 100%);
+        }
+
+        /* 3. MELCHIOR (右下) - 変形四角 */
+        .shape-mel {
+            bottom: 0; right: 0;
+            width: 400px; height: 250px;
+            clip-path: polygon(28% 0, 100% 0, 100% 100%, 0 100%, 0 32%);
+        }
+        .shape-mel .unit-core {
+            clip-path: polygon(28% 0, 100% 0, 100% 100%, 0 100%, 0 32%);
+        }
+
+        /* --- ユニット内のテキスト --- */
+        .label-en {
+            position: absolute;
+            font-family: 'Antonio', sans-serif;
+            font-size: 42px;
+            color: transparent; /* 背景色がついたときに見えるように最初は透明 */
+            -webkit-text-stroke: 1px var(--c-orange);
+            z-index: 5;
+            top: 15%; /* 上寄りに配置 */
+        }
+        
+        .label-jp {
+            font-size: 90px; /* デカく！ */
+            font-weight: 900;
+            color: #000; /* 塗りつぶされた時に見える */
+            z-index: 10;
+            transform: scale(1, 1.1); /* 少し縦長 */
+            display: none; /* 初期非表示 */
+            white-space: nowrap;
+            margin-top: 10px;
+        }
+
+        .label-num {
+            position: absolute;
+            bottom: 10px; right: 20px;
+            font-family: 'Antonio', sans-serif;
+            font-size: 36px;
+            color: var(--c-orange);
+        }
+
+        /* --- 接続パイプ --- */
+        .pipe {
+            position: absolute;
+            background: var(--c-orange);
+            z-index: -1;
+        }
+        .p-v { top: 260px; left: 50%; width: 10px; height: 70px; transform: translateX(-5px); }
+        .p-l { top: 350px; left: 300px; width: 160px; height: 10px; transform: rotate(30deg); }
+        .p-r { top: 350px; right: 300px; width: 160px; height: 10px; transform: rotate(-30deg); }
+        .center-txt {
+            position: absolute;
+            top: 325px; left: 50%; transform: translateX(-50%);
+            color: var(--c-orange);
+            font-size: 32px; font-weight: 900; letter-spacing: 3px;
+        }
+
+        /* --- アニメーション・状態クラス --- */
+
+        /* 激しい点滅（思考中） */
+        .strobe .unit-frame {
+            animation: strobe-anim 0.08s infinite;
+        }
+        .strobe .unit-core {
+            animation: strobe-inner-anim 0.08s infinite;
+        }
+
+        @keyframes strobe-anim {
+            0% { background-color: var(--c-orange); }
+            50% { background-color: #fff; } /* 白飛び */
+            100% { background-color: var(--c-black); }
+        }
+        @keyframes strobe-inner-anim {
+            0% { background-color: #000; }
+            50% { background-color: var(--c-orange); } /* 中身が反転 */
+            100% { background-color: #000; }
+        }
+
+        /* 承認 (青ベタ塗り) */
+        .status-yes .unit-frame { background-color: var(--c-blue); }
+        .status-yes .unit-core { background-color: var(--c-blue); }
+        .status-yes .label-en { color: #000; -webkit-text-stroke: 0; top: 10%; font-size: 30px; } /* 確定時は少し小さく位置変更 */
+        .status-yes .label-jp { display: block; }
+        .status-yes .label-num { color: #000; }
+
+        /* 否定 (赤ベタ塗り) */
+        .status-no .unit-frame { background-color: var(--c-red); }
+        .status-no .unit-core { background-color: var(--c-red); }
+        .status-no .label-en { color: #000; -webkit-text-stroke: 0; top: 10%; font-size: 30px; }
+        .status-no .label-jp { display: block; }
+        .status-no .label-num { color: #000; }
+
+
+        /* --- 最終結果スタンプ --- */
+        .result-stamp {
+            position: absolute;
+            top: 250px; right: 60px;
+            border: 6px double var(--c-blue);
+            padding: 0px 30px;
+            transform: rotate(-3deg);
+            display: none;
+            z-index: 100;
+            background: rgba(0,0,0,0.6); /* 文字が見やすいように少し背景 */
+        }
+        .rs-text {
+            font-size: 80px;
+            font-weight: 900;
+            color: var(--c-blue);
+            transform: scale(1, 1.2);
+        }
+
+        /* --- 入力フォーム --- */
+        #input-wrap {
+            position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 700px;
+            z-index: 999;
+        }
+        input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 4px solid var(--c-orange);
+            font-size: 40px;
+            color: var(--c-orange);
+            font-family: 'Shippori Mincho', serif;
+            text-align: center;
+            outline: none;
+            text-shadow: 0 0 10px var(--c-orange);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="stage">
+        <div class="grid-bg"></div>
+
+        <div class="header-txt h-left">提 訴</div>
+        <div class="header-txt h-right" id="h-res">決 議</div>
+
+        <div class="info-box">
+            <div class="ib-title">CODE: 378</div>
+            <div class="ib-sub">
+                FILE: MAGI_SYS<br>
+                EXTENSION: 2024<br>
+                PRIORITY: AAA
+            </div>
+        </div>
+
+        <div id="result-box" class="result-stamp">
+            <div id="result-txt" class="rs-text">可決</div>
+        </div>
+
+        <!-- MAGI UNIT LAYOUT -->
+        <div class="magi-layout">
+            <div class="pipe p-v"></div>
+            <div class="pipe p-l"></div>
+            <div class="pipe p-r"></div>
+            <div class="center-txt">MAGI</div>
+
+            <!-- BALTHASAR -->
+            <div id="u-bal" class="unit-frame shape-bal">
+                <div class="unit-core">
+                    <div class="label-en">BALTHASAR-2</div>
+                    <div class="label-jp" id="txt-bal">承認</div>
+                    <div class="label-num">2</div>
+                </div>
+            </div>
+
+            <!-- CASPER -->
+            <div id="u-cas" class="unit-frame shape-cas">
+                <div class="unit-core">
+                    <div class="label-en">CASPER-3</div>
+                    <div class="label-jp" id="txt-cas">承認</div>
+                    <div class="label-num">3</div>
+                </div>
+            </div>
+
+            <!-- MELCHIOR -->
+            <div id="u-mel" class="unit-frame shape-mel">
+                <div class="unit-core">
+                    <div class="label-en">MELCHIOR-1</div>
+                    <div class="label-jp" id="txt-mel">承認</div>
+                    <div class="label-num">1</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- INPUT -->
+        <div id="input-wrap">
+            <input type="text" id="query" placeholder="CLICK TO START" autocomplete="off">
+        </div>
+    </div>
+
+    <script>
+        // 画面サイズにフィットさせる（アスペクト比維持）
+        const stage = document.getElementById('stage');
+        function resize() {
+            const scale = Math.min(window.innerWidth/1024, window.innerHeight/768);
+            stage.style.transform = `scale(${scale})`;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // -----------------------------------------
+        
+        const els = {
+            bal: { frame: document.getElementById('u-bal'), txt: document.getElementById('txt-bal') },
+            cas: { frame: document.getElementById('u-cas'), txt: document.getElementById('txt-cas') },
+            mel: { frame: document.getElementById('u-mel'), txt: document.getElementById('txt-mel') },
+            input: document.getElementById('query'),
+            inputWrap: document.getElementById('input-wrap'),
+            headerRes: document.getElementById('h-res'),
+            resBox: document.getElementById('result-box'),
+            resTxt: document.getElementById('result-txt')
+        };
+
+        const sound = {
+            // 音が必要ならここにAudioオブジェクトを入れる
+            // blink: new Audio('noise.mp3'),
+            // decide: new Audio('dong.mp3')
+        };
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        // MAGI AI ロジック (ランダムシミュレーション)
+        function decide(name) {
+            // CASPERは裏切り率高め
+            if(name === 'cas') return Math.random() > 0.5; 
+            return Math.random() > 0.2; 
+        }
+
+        async function sequence() {
+            if(!els.input.value) return;
+            
+            // リセット
+            els.inputWrap.style.display = 'none';
+            els.resBox.style.display = 'none';
+            els.headerRes.style.opacity = 0.2;
+            ['bal','cas','mel'].forEach(k => {
+                els[k].frame.className = els[k].frame.className.replace(/status-\w+|strobe/g, '').trim();
+            });
+
+            // 1. 激しい思考点滅 (Strobe)
+            // 全体がバチバチする
+            ['bal','cas','mel'].forEach(k => els[k].frame.classList.add('strobe'));
+            
+            // 思考時間 (2秒〜3秒)
+            await sleep(2000);
+
+            // 点滅停止
+            ['bal','cas','mel'].forEach(k => els[k].frame.classList.remove('strobe'));
+            await sleep(100); // 一瞬の間
+
+            // 2. 結果表示 (ズドン、ズドン、ズドン)
+            const order = ['mel', 'bal', 'cas'];
+            let yesCnt = 0;
+
+            for(let name of order) {
+                const isYes = decide(name);
+                const obj = els[name];
+                
+                if(isYes) {
+                    obj.frame.classList.add('status-yes');
+                    obj.txt.innerText = "承認";
+                    yesCnt++;
+                } else {
+                    obj.frame.classList.add('status-no');
+                    obj.txt.innerText = "否定";
+                }
+                await sleep(600); // 判定ごとの間隔
+            }
+
+            // 3. 最終決議
+            await sleep(800);
+            const approved = yesCnt >= 2;
+
+            els.headerRes.style.opacity = 1;
+            els.resBox.style.display = 'block';
+            els.resTxt.innerText = approved ? "可決" : "否決";
+            
+            if(approved) {
+                els.resTxt.style.color = 'var(--c-blue)';
+                els.resBox.style.borderColor = 'var(--c-blue)';
+            } else {
+                els.resTxt.style.color = 'var(--c-red)';
+                els.resBox.style.borderColor = 'var(--c-red)';
+            }
+
+            // 復帰
+            setTimeout(() => {
+                document.body.addEventListener('click', reset, {once:true});
+            }, 2000);
+        }
+
+        function reset() {
+            els.input.value = '';
+            els.inputWrap.style.display = 'block';
+            els.input.focus();
+            els.resBox.style.display = 'none';
+            els.headerRes.style.opacity = 0.2;
+            ['bal','cas','mel'].forEach(k => {
+                els[k].frame.className = els[k].frame.className.replace(/status-\w+/g, '').trim();
+            });
+        }
+
+        els.input.addEventListener('keypress', e => {
+            if(e.key === 'Enter') sequence();
+        });
+        els.input.focus();
+
+    </script>
+</body>
+</html>
